@@ -1,0 +1,7 @@
+/project-todos.org
+/__pycache__/
+/config/bitcoin.conf
+*.key
+*.pem
+*.csr
+*.cnf

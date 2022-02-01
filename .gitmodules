@@ -1,0 +1,3 @@
+[submodule "pebble"]
+	path = pebble
+	url = git@github.com:TUC-Circular-Economy-Department/pebble.git
