@@ -6,23 +6,31 @@ from datetime import datetime
 import traceback
 from decimal import Decimal
 from cryptography.x509 import load_pem_x509_certificate, ObjectIdentifier, SubjectAlternativeName, DNSName
-from blockvoke_bitcoin_rpc import get_bitcoind_connection, get_bitcoin_from_faucet2
+from blockvoke_bitcoin_rpc import get_bitcoind_connection, get_bitcoin_from_faucet
 
 def create_txfund_transaction(bitcoind_rpcproxy_connection, coaddress, cert_multisig):
-
-    get_bitcoin_from_faucet2(coaddress, Decimal("0.00012"))
-
-    co_unspent = bitcoind_rpcproxy_connection.listunspent()[0]
+    # co_unspent = bitcoind_rpcproxy_connection.listunspent()[0]
 
     txfund_transaction = bitcoind_rpcproxy_connection.createrawtransaction(
-        [{
-        "txid":co_unspent["txid"],
-        "vout":co_unspent["vout"]
-        }],
-        {cert_multisig["address"]:Decimal("0.00011")})
+        [# {
+        # "txid":co_unspent["txid"],
+        # "vout":co_unspent["vout"]
+        # }
+        # Since fundrawtransaction will add the coaddress automatically
+         ],
+        {cert_multisig["address"]:Decimal("0.00000600")})
 
-    signed_txfund_transaction = bitcoind_rpcproxy_connection.signrawtransactionwithkey(txfund_transaction,
-                                                                                       [bitcoind_rpcproxy_connection.dumpprivkey(coaddress)])
+    funded_txfund_transaction = bitcoind_rpcproxy_connection.fundrawtransaction(
+        txfund_transaction,
+        {
+            "fee_rate":1,
+            "changeAddress":coaddress,
+            "subtractFeeFromOutputs":[0]
+        })
+
+    signed_txfund_transaction = bitcoind_rpcproxy_connection.signrawtransactionwithkey(
+        funded_txfund_transaction["hex"],
+        [bitcoind_rpcproxy_connection.dumpprivkey(coaddress)])
 
     return signed_txfund_transaction
 
@@ -50,6 +58,26 @@ def create_txrevoke_transaction(bitcoind_rpcproxy_connection,
 
     decoded_txfund_transaction = bitcoind_rpcproxy_connection.decoderawtransaction(txfund_transaction["hex"])
 
+
+    # txrevoke_transaction = bitcoind_rpcproxy_connection.createrawtransaction(
+    #     [{
+    #         "txid":decoded_txfund_transaction["txid"],
+    #         "vout":0,
+    #         "scriptPubKey":decoded_txfund_transaction["vout"][0]["scriptPubKey"]["hex"],
+    #         "redeemScript":cert_multisig["redeemScript"]
+    #     }],
+    #     {coaddress:decoded_txfund_transaction["vout"][0]["value"],
+    #      "data":OP_RETURN})
+
+    # pprint(bitcoind_rpcproxy_connection.decoderawtransaction(txrevoke_transaction))
+
+    # funded_txrevoke_transaction = bitcoind_rpcproxy_connection.fundrawtransaction(
+    #     txrevoke_transaction,
+    #     {
+    #         "fee_rate":"1",
+    #         "subtractFeeFromOutputs":[0] # Subtract the fee from the coaddress output
+    #     })
+
     txrevoke_transaction = bitcoind_rpcproxy_connection.createrawtransaction(
         [{
             "txid":decoded_txfund_transaction["txid"],
@@ -57,7 +85,7 @@ def create_txrevoke_transaction(bitcoind_rpcproxy_connection,
             "scriptPubKey":decoded_txfund_transaction["vout"][0]["scriptPubKey"]["hex"],
             "redeemScript":cert_multisig["redeemScript"]
         }],
-        {coaddress:Decimal("0.0001"),
+        {coaddress:decoded_txfund_transaction["vout"][0]["value"]-Decimal("0.00000170"),
          "data":OP_RETURN})
 
     signed_txrevoke_transaction = bitcoind_rpcproxy_connection.signrawtransactionwithkey(
@@ -67,7 +95,7 @@ def create_txrevoke_transaction(bitcoind_rpcproxy_connection,
           "vout":0,
           "scriptPubKey":decoded_txfund_transaction["vout"][0]["scriptPubKey"]["hex"],
           "redeemScript":cert_multisig["redeemScript"],
-          "amount":Decimal("0.00011")}])
+          "amount":decoded_txfund_transaction["vout"][0]["value"]}])
     
     return signed_txrevoke_transaction
 
@@ -92,7 +120,8 @@ def create_revocation_transactions(bitcoind_rpcproxy_connection,
 def revoke_certificate(DNS,
                        revocationCode,
                        working_dir="./working_dir",
-                       bitcoin_wallet=None):
+                       bitcoin_wallet=None,
+                       send=False):
 
     """Revoke a certificate using the BlockVoke protocol
 
@@ -118,6 +147,7 @@ def revoke_certificate(DNS,
     btd.loadwallet(bitcoin_wallet)
 
     txids = (None, None)
+    txfund_transaction, txrevoke_transaction = None, None
 
     try:
         coaddress = list(btd.getaddressesbylabel("{}-coaddress".format(DNS)).keys())[0]
@@ -145,8 +175,9 @@ def revoke_certificate(DNS,
             cert_multisig,
             OP_RETURN)
 
-        txids = (btd.sendrawtransaction(txfund_transaction["hex"]),
-                 btd.sendrawtransaction(txrevoke_transaction["hex"]))
+        if not send:
+            txids = (btd.sendrawtransaction(txfund_transaction["hex"]),
+                     btd.sendrawtransaction(txrevoke_transaction["hex"]))
 
     except Exception as E:
         print("Unable to Revoke BlockVoke Certificate:")
@@ -154,6 +185,4 @@ def revoke_certificate(DNS,
     finally:
         btd.unloadwallet(bitcoin_wallet)
 
-    return txids
-
-revoke_certificate("example-test2.org", 0)
+    return (txids if not send else (txfund_transaction, txrevoke_transaction))
