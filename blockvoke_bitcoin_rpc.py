@@ -171,4 +171,3 @@ def get_bitcoin_from_faucet(address, amount):
     btd.unloadwallet("testnetfaucet")
 
     return txid
-

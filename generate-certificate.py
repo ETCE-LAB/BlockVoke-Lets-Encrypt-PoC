@@ -125,17 +125,3 @@ def generate_certificate(country,
 
     return new_address_pubkey
     
-
-# generate_certificate("DE",
-#                      "Niedersachsen",
-#                      "Goettingen",
-#                      "Example test Organisation2",
-#                      "Example test2",
-#                      "example-test2.org",
-#                      "example-test2.org",
-#                      "example@example-test2.org",
-#                      working_dir="./working_dir",
-#                      openssl_working_dir="./working_dir/openssl",
-#                      certbot_working_dir="./working_dir/certbot",
-#                      pebble_server="https://localhost:14000/dir",
-#                      bitcoin_wallet=None)
