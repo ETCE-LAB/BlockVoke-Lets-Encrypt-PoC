@@ -22,5 +22,3 @@ def get_OP_RETURN(tx):
 def get_revocations(tx_list):
     return [OP_RETURN[0] for OP_RETURN in [get_OP_RETURN(tx) for tx in tx_list] if OP_RETURN]
 
-get_revocations(get_tx_list_in_blockrange(range(200,220)))
-

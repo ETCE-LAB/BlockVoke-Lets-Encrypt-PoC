@@ -136,7 +136,6 @@ def get_bitcoin_from_faucet(address, amount):
     Faucet should already be initialized
 
     """
-    faucet_unspent = get_faucet_info()
     btd = get_bitcoind_connection("testnetfaucet")
     btd.loadwallet("testnetfaucet")
     faucet_address = list(btd.getaddressesbylabel("testnetfaucet").keys())[0]

@@ -18,14 +18,13 @@ def create_txfund_transaction(bitcoind_rpcproxy_connection, coaddress, cert_mult
         # }
         # Since fundrawtransaction will add the coaddress automatically
          ],
-        {cert_multisig["address"]:Decimal("0.00000600")})
+        {cert_multisig["address"]:Decimal("0.00000477")})
 
     funded_txfund_transaction = bitcoind_rpcproxy_connection.fundrawtransaction(
         txfund_transaction,
         {
             "fee_rate":1,
             "changeAddress":coaddress,
-            "subtractFeeFromOutputs":[0]
         })
 
     signed_txfund_transaction = bitcoind_rpcproxy_connection.signrawtransactionwithkey(

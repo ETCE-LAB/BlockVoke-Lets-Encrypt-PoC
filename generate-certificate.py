@@ -123,5 +123,4 @@ def generate_certificate(country,
     subprocess.run(["openssl", "x509", "-noout", "-text", "-in",
                     "{0}/certificates/{1}-cert.pem".format(working_dir, DNS)])
 
-    return new_address_pubkey
-    
+    return new_address_pubkey, new_address
