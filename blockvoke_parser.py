@@ -1,7 +1,5 @@
 from blockvoke_bitcoin_rpc import get_bitcoind_connection
 
-import time
-
 def get_block_tx_list(height):
     btd = get_bitcoind_connection()
 
@@ -22,3 +20,8 @@ def get_OP_RETURN(tx):
 def get_revocations(tx_list):
     return [OP_RETURN[0] for OP_RETURN in [get_OP_RETURN(tx) for tx in tx_list] if OP_RETURN]
 
+def get_tx_list_in_mempool():
+    btd = get_bitcoind_connection()
+    
+    return [btd.decoderawtransaction(btd.getrawtransaction(txid))
+            for txid in btd.getrawmempool()]
