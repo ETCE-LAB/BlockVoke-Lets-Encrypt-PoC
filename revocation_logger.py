@@ -80,7 +80,7 @@ class RevocationLogger(object):
     def set_co_funded(self, cert_dns_name):
         try:
             if(self.certificates[cert_dns_name]["CO_funded"]== "False"):
-                self.certificate[cert_dns_name]["CO_funded"] = "True"
+                self.certificates[cert_dns_name]["CO_funded"] = "True"
                 logging.info("CO `{}` is funded".format(cert_dns_name))
             else:
                 logging.error("CO `{}` funding is already complete".format(cert_dns_name))

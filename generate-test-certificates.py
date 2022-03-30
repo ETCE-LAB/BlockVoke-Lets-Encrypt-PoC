@@ -46,7 +46,7 @@ def main(num, id):
                 cert_multisig_address)
         except Exception as E:
            print("Error logging generated Certificate {}".format(i)) 
-           print(E)
+           raise(E)
 
     bv_test_logger.write(TEST_LOGGER_CSV_FILE.format(id))
 
