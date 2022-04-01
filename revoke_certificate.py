@@ -174,7 +174,7 @@ def revoke_certificate(DNS,
             cert_multisig,
             OP_RETURN)
 
-        if not send:
+        if send:
             txids = (btd.sendrawtransaction(txfund_transaction["hex"]),
                      btd.sendrawtransaction(txrevoke_transaction["hex"]))
 
@@ -184,4 +184,4 @@ def revoke_certificate(DNS,
     finally:
         btd.unloadwallet(bitcoin_wallet)
 
-    return (txids if not send else (txfund_transaction, txrevoke_transaction))
+    return (txids if send else (txfund_transaction, txrevoke_transaction))

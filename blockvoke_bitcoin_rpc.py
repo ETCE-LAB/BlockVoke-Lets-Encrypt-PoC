@@ -11,14 +11,19 @@ from bitcoinlib.services.authproxy import AuthServiceProxy
 from decimal import Decimal
 
 BITCOIND_CONFIG_FILE_PATH = os.path.join(os.path.realpath("config"), "bitcoin.conf")
+ALTERNATE_BITCOIND_CONFIG_FILE_PATH = os.path.join(os.path.realpath("config"), "bitcoin.conf")
 
 def get_help():
     print(get_bitcoind_connection().help())
 
-def get_bitcoind_connection(wallet_name=None) -> BitcoindClient:
+def get_bitcoind_connection(wallet_name=None, rpcconnect=None) -> BitcoindClient:
     """Connects to the JSON RPC bitocind server
+    
+    `127.0.0.1` is used if rpcconnect is not specified.
 
     """
+
+    bitcoind_ip = rpcconnect if rpcconnect != None else "127.0.0.1"
 
     cp = configparser.ConfigParser()
 
@@ -26,10 +31,11 @@ def get_bitcoind_connection(wallet_name=None) -> BitcoindClient:
 
     bitcoind_rpcuser, bitcoind_rpcpass, bitcoind_rpcport = cp.get("rpc", "rpcuser"), cp.get("rpc", "rpcpassword"), cp.get("rpc", "rpcport")
 
-    service_url = "http://{0}:{1}@127.0.0.1:{2}{3}".format(bitcoind_rpcuser,
-                                                           bitcoind_rpcpass,
-                                                           bitcoind_rpcport,
-                                                           ("/wallet/{}".format(wallet_name) if wallet_name else ""))
+    service_url = "http://{0}:{1}@{2}:{3}{4}".format(bitcoind_rpcuser,
+                                                     bitcoind_rpcpass,
+                                                     bitcoind_ip,
+                                                     bitcoind_rpcport,
+                                                     ("/wallet/{}".format(wallet_name) if wallet_name else ""))
 
     return AuthServiceProxy(service_url)
 
