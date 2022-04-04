@@ -54,8 +54,8 @@ def main(id):
 
         decoded_rawtransaction = btd.decoderawtransaction(signed_rawtransaction["hex"])
 
-        # txid = btd.sendrawtransaction(signed_rawtransaction["hex"])
-        txid = 1
+        txid = btd.sendrawtransaction(signed_rawtransaction["hex"])
+        # txid = 1
         print("Transaction `{0}` sent successfully with `{1}` outputs, spending `{2}` BTC as fees".format(txid, len(decoded_rawtransaction["vout"]), fee))
     except Exception as E:
         btd.unloadwallet("testnetfaucet")

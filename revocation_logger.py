@@ -37,7 +37,7 @@ class RevocationLogger(object):
             certificates = csv.DictReader(csvfile)
             for certificate in certificates:
                 self.certificates[certificate["Cert DNS name"]] = certificate
-                self.__fingerprint_16_index__[certificate["Cert fingerprint"]] = certificate["Cert DNS name"]
+                self.__fingerprint_16_index__[certificate["Cert fingerprint"][:32]] = certificate["Cert DNS name"]
             logging.info("Reading `{0}` certificate entries from `{1}` ".format(len(self.certificates), csvfile_path))
         
     def write(self, csvfile_path):
@@ -81,7 +81,7 @@ class RevocationLogger(object):
         try:
             if(self.certificates[cert_dns_name]["CO_funded"]== "False"):
                 self.certificates[cert_dns_name]["CO_funded"] = "True"
-                logging.info("CO `{}` is funded".format(cert_dns_name))
+                # logging.info("CO `{}` is funded".format(cert_dns_name))
             else:
                 logging.error("CO `{}` funding is already complete".format(cert_dns_name))
                 
@@ -123,7 +123,7 @@ class RevocationLogger(object):
                 logging.info("`{}` revoked from mempool".format(cert_dns_name))
             else:
                 logging.error(
-                    "`{0}` was already revoked via `{1}`, skipping".format(cert_dns_name,
+                    "MEMPOOL:`{0}` was already revoked via `{1}`, skipping".format(cert_dns_name,
                                                                            self.certificates[cert_dns_name]["Cert revocation type"]))
                     
                 
@@ -155,7 +155,7 @@ class RevocationLogger(object):
                 self.certificates[cert_dns_name]["Cert revocation blocktime"] = cert_revocation_blocktime
                 logging.info("Revocation transactions for `{}` confirmed in blockchain".format(cert_dns_name))
                 logging.error(
-                    "`{1}` was already revoked via `{2}`, skipping".format(cert_dns_name,
+                    "BLOCK_TX:`{0}` was already revoked via `{1}`, skipping".format(cert_dns_name,
                                                                            self.certificates[cert_dns_name]["Cert revocation type"]))
                 
         except Exception as E:

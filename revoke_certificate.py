@@ -136,8 +136,8 @@ def revoke_certificate(DNS,
     cert_multisig_address = BlockVokeCertificate.extensions.get_extension_for_oid(ObjectIdentifier("1.2.3.4")).value.value # Temporary BlockVoke ObjectIdentifier
     ca_address_pubkey_hex = BlockVokeCertificate.extensions.get_extension_for_oid(ObjectIdentifier("1.2.3.5")).value.value # Temporary CA Bitcoin Address Pubkey ObjectIdentifier
 
-    print("Certificate Multisignature address: ", cert_multisig_address)
-    print("CA Address Pubkey: ", ca_address_pubkey_hex)
+    # print("Certificate Multisignature address: ", cert_multisig_address)
+    # print("CA Address Pubkey: ", ca_address_pubkey_hex)
 
     if bitcoin_wallet==None:
         bitcoin_wallet=DNS
@@ -154,7 +154,7 @@ def revoke_certificate(DNS,
         coaddress_info = btd.getaddressinfo(coaddress)
 
         co_address_pubkey_hex = coaddress_info["pubkey"]
-        print("CO Address Pubkey: ", co_address_pubkey_hex)
+        # print("CO Address Pubkey: ", co_address_pubkey_hex)
 
         pubkey1, pubkey2 = co_address_pubkey_hex, ca_address_pubkey_hex.decode()
 

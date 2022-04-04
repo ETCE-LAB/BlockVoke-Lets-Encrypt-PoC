@@ -1,3 +1,4 @@
+import traceback
 from blockvoke_bitcoin_rpc import get_bitcoind_connection
 
 def get_block_tx_list(height, rpcconnect=None):
@@ -25,6 +26,14 @@ def get_revocations(tx_list):
 
 def get_tx_list_in_mempool(rpcconnect=None):
     btd = get_bitcoind_connection(rpcconnect=rpcconnect)
-    
-    return [btd.decoderawtransaction(btd.getrawtransaction(txid))
-            for txid in btd.getrawmempool()]
+
+    rawmempool = btd.getrawmempool()
+    txs = []
+
+    for txid in rawmempool:
+        try:
+            txs.append(btd.decoderawtransaction(btd.getrawtransaction(txid)))
+        except Exception as E:
+            traceback.print_exception(type(E), E, E.__traceback__)
+            btd = get_bitcoind_connection(rpcconnect=rpcconnect)
+    return txs
