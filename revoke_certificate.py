@@ -57,7 +57,6 @@ def create_txrevoke_transaction(bitcoind_rpcproxy_connection,
 
     decoded_txfund_transaction = bitcoind_rpcproxy_connection.decoderawtransaction(txfund_transaction["hex"])
 
-
     # txrevoke_transaction = bitcoind_rpcproxy_connection.createrawtransaction(
     #     [{
     #         "txid":decoded_txfund_transaction["txid"],
