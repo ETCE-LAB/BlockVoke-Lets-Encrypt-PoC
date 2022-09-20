@@ -11,14 +11,19 @@ from bitcoinlib.services.authproxy import AuthServiceProxy
 from decimal import Decimal
 
 BITCOIND_CONFIG_FILE_PATH = os.path.join(os.path.realpath("config"), "bitcoin.conf")
+ALTERNATE_BITCOIND_CONFIG_FILE_PATH = os.path.join(os.path.realpath("config"), "bitcoin.conf")
 
 def get_help():
     print(get_bitcoind_connection().help())
 
-def get_bitcoind_connection(wallet_name=None) -> BitcoindClient:
+def get_bitcoind_connection(wallet_name=None, rpcconnect=None) -> BitcoindClient:
     """Connects to the JSON RPC bitocind server
+    
+    `127.0.0.1` is used if rpcconnect is not specified.
 
     """
+
+    bitcoind_ip = rpcconnect if rpcconnect != None else "127.0.0.1"
 
     cp = configparser.ConfigParser()
 
@@ -26,33 +31,34 @@ def get_bitcoind_connection(wallet_name=None) -> BitcoindClient:
 
     bitcoind_rpcuser, bitcoind_rpcpass, bitcoind_rpcport = cp.get("rpc", "rpcuser"), cp.get("rpc", "rpcpassword"), cp.get("rpc", "rpcport")
 
-    service_url = "http://{0}:{1}@127.0.0.1:{2}{3}".format(bitcoind_rpcuser,
-                                                           bitcoind_rpcpass,
-                                                           bitcoind_rpcport,
-                                                           ("/wallet/{}".format(wallet_name) if wallet_name else ""))
+    service_url = "http://{0}:{1}@{2}:{3}{4}".format(bitcoind_rpcuser,
+                                                     bitcoind_rpcpass,
+                                                     bitcoind_ip,
+                                                     bitcoind_rpcport,
+                                                     ("/wallet/{}".format(wallet_name) if wallet_name else ""))
 
     return AuthServiceProxy(service_url)
 
 def __initialize_faucet__():
-    """Creates a wallet with address that can be a faucet for regtest
-    chains
+    """Creates a wallet with address that provides bitcoin to the CO's
+    
 
     """
     btd = get_bitcoind_connection()
-    btd.createwallet("faucet")
+    btd.createwallet("testnetfaucet")
 
-    del btd
+    # del btd
 
-    btd = get_bitcoind_connection(wallet_name="faucet")
-    faucet_address = btd.getnewaddress("faucetaddress")
+    # btd = get_bitcoind_connection(wallet_name="faucet")
+    # faucet_address = btd.getnewaddress("faucetaddress")
 
-    print("New Faucet address: ", faucet_address)
+    # print("New Faucet address: ", faucet_address)
 
-    btd.generatetoaddress(101, faucet_address)
+    # btd.generatetoaddress(101, faucet_address)
 
-    unspent = btd.listunspent(100, 200, [faucet_address])
+    # unspent = btd.listunspent(100, 200, [faucet_address])
 
-    btd.unloadwallet("faucet")
+    btd.unloadwallet("testnetfaucet")
 
     return unspent
 
@@ -104,148 +110,69 @@ def mine_blocks(num=10):
 def get_faucet_info():
     """Get the address of faucet and unspent balance
 
-    For use in a regtest chain.
+    For use in the testnet chain.
     
     Faucet should already be initialized
 
     """
 
-    btd = get_bitcoind_connection("faucet")
-    btd.loadwallet("faucet")
+    btd = get_bitcoind_connection("testnetfaucet")
+    btd.loadwallet("testnetfaucet")
 
-    faucet_address = list(btd.getaddressesbylabel("faucetaddress").keys())
+    faucet_address = list(btd.getaddressesbylabel("testnetfaucet").keys())
 
-    unspent = btd.listunspent(1, 2000, faucet_address)
+    unspent = btd.listunspent(1, 9999999, faucet_address)
 
-    btd.unloadwallet("faucet")
+    btd.unloadwallet("testnetfaucet")
 
     return unspent
 
 def get_bitcoin_from_faucet2(address, amount):
-    btd = get_bitcoind_connection("faucet")
-    btd.loadwallet("faucet")
-    btd.sendtoaddress(address, amount)
-    mine_blocks(1)
-    btd.unloadwallet("faucet")
+    btd = get_bitcoind_connection("testnetfaucet")
+    btd.loadwallet("testnetfaucet")
+    btd.sendtoaddress(address, amount, fee_rate="1")
+    # mine_blocks(1)
+    btd.unloadwallet("testnetfaucet")
 
-def get_bitcoin_from_faucet(address, amount, fees=Decimal("0.00001")):
+def get_bitcoin_from_faucet(address, amount):
     """Get some bitcoin from faucet
-    
-    For use in a regtest chain.
-    
+
+    Creates the transactions itself, and uses a fee_rate of 1sat/vB
+
     Faucet should already be initialized
 
     """
-    faucet_unspent = get_faucet_info()
-    btd = get_bitcoind_connection("faucet")
-    btd.loadwallet("faucet")
+    btd = get_bitcoind_connection("testnetfaucet")
+    btd.loadwallet("testnetfaucet")
+    faucet_address = list(btd.getaddressesbylabel("testnetfaucet").keys())[0]
 
     try:
-        faucet_balance = faucet_unspent[0]["amount"] - Decimal(amount) - Decimal(fees)
-        recipient_balance = Decimal(amount)
+
         rawtransaction = btd.createrawtransaction(
-            [{
-                "txid": faucet_unspent[0]["txid"],
-                "vout": faucet_unspent[0]["vout"]
-            }],
-            [{
-                faucet_unspent[0]["address"]:faucet_balance
-            },
+            [],
+            {address:amount})
+
+        funded_rawtransaction = btd.fundrawtransaction(
+            rawtransaction,
             {
-                address:recipient_balance
-            }])
+                "changeAddress":faucet_address,
+                "fee_rate":1
+            })
+
+        print("Fee:", str(funded_rawtransaction["fee"]))
         
-        # print("Raw Transaction: ", rawtransaction)
-        
-        signed_rawtransaction = btd.signrawtransactionwithwallet(rawtransaction)
+        signed_rawtransaction = btd.signrawtransactionwithwallet(
+            funded_rawtransaction["hex"])
 
         # print("Signed Transaction: ", signed_rawtransaction,
         #       type(signed_rawtransaction))
         
         txid = btd.sendrawtransaction(signed_rawtransaction["hex"])
         
-        mine_blocks(1)
-        
     except Exception as E:
-        print(faucet_unspent)
-        btd.unloadwallet("faucet")
+        btd.unloadwallet("testnetfaucet")
         raise E
 
-    btd.unloadwallet("faucet")
+    btd.unloadwallet("testnetfaucet")
 
     return txid
-
-
-# btd_ca = get_bitcoind_connection("ca-test")
-# btd_ca.createwallet("ca-test")
-
-# btd_co = get_bitcoind_connection("co-test")
-# btd_co.createwallet("co-test")
-
-# ca_addr = btd_ca.getnewaddress()
-
-# co_addr = btd_co.getnewaddress()
-
-# ca_addr_info = btd_ca.getaddressinfo(ca_addr)
-# co_addr_info = btd_co.getaddressinfo(co_addr)
-
-
-# multisig_addr_info = btd_co.addmultisigaddress(1, [ca_addr_info["pubkey"],
-#                                                    co_addr_info["pubkey"]],
-#                                                "legacy")
-
-
-# get_bitcoin_from_faucet2(co_addr, Decimal("0.00012"))
-
-
-
-############### Test Initialization complete 
-
-
-###############  Test Transactions
-
-
-# co_unspent = btd_co.listunspent()[0]
-
-# txfund_transaction = btd_co.createrawtransaction(
-#     [{
-#         "txid":co_unspent["txid"],
-#         "vout":co_unspent["vout"]
-#     }],
-#     {multisig_addr_info["address"]:Decimal("0.00011")})
-
-# txfund_transaction_signed = btd_co.signrawtransactionwithkey(txfund_transaction,
-#                                                              [btd_co.dumpprivkey(co_addr)])
-
-
-################# Test TxFund Transaction Complete
-
-# txfund_transaction_decoded = btd_co.decoderawtransaction(txfund_transaction_signed["hex"])
-
-# txrevoke_transaction = btd_co.createrawtransaction(
-#     [{
-#         "txid":txfund_transaction_decoded["txid"],
-#         "vout":0,
-#         "scriptPubKey":txfund_transaction_decoded["vout"][0]["scriptPubKey"]["hex"],
-#         "redeemScript":multisig_addr_info["redeemScript"]
-#     }],
-#     {co_addr:Decimal("0.0001")})
-
-# txrevoke_transaction_signed = btd_co.signrawtransactionwithkey(txrevoke_transaction,
-#                                                                [btd_co.dumpprivkey(co_addr)],
-#                                                                [{"txid":txfund_transaction_decoded["txid"],
-#                                                                  "vout":0,
-#                                                                  "scriptPubKey":txfund_transaction_decoded["vout"][0]["scriptPubKey"]["hex"],
-#                                                                  "redeemScript":multisig_addr_info["redeemScript"],
-#                                                                  "amount":Decimal("0.00011")}])
-
-################## Test TxRevoke Transaction Complete
-
-# txfund_txid = btd_co.sendrawtransaction(txfund_transaction_signed["hex"])
-
-################## Test TxFund Transaction Sent
-
-# txrevoke_txid = btd_co.sendrawtransaction(txrevoke_transaction_signed["hex"])
-
-################### Test TxRevoke Transaction Sent
-

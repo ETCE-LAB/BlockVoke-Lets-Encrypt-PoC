@@ -5,3 +5,4 @@
 *.pem
 *.csr
 *.cnf
+/working_dir/
